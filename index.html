@@ -221,17 +221,17 @@ description = "A simple user management API with CRUD operations."
 name = "user-api-service"
 version = "0.1.0"
 
-[[metrics]]
-name = "user_model"
-logic = "A Pydantic model for a User with id, username, and email."
-aggregation = "pydantic_model"
-aggregationField = "User"
+<span class="comment"># Define the core data models (entities) for the service</span>
+[[entities]]
+name = "User"
+type = "pydantic_model"
+description = "A Pydantic model for a User with an ID, username, and email."
 
-[[metrics]]
-name = "crud_endpoints"
-logic = "Generate FastAPI endpoints for creating, reading, updating, and deleting users."
-aggregation = "fastapi_router"
-aggregationField = "/users"</code></pre>
+<span class="comment"># Define the API routes and their behavior</span>
+[[api_routes]]
+path = "/users"
+type = "fastapi_crud_router"
+description = "Generate FastAPI endpoints for creating, reading, updating, and deleting users based on the 'User' entity."</code></pre>
                     </div>
                     <div class="code-block">
                         <h3>2. We Generate the Full Project...</h3>
