@@ -19,7 +19,7 @@ const Home: React.FC = () => {
           <Package size={64} className="mx-auto mb-4" />
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Find & Share Data Specs</h1>
           <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            The central registry for high-quality, reusable data specifications and plugins.
+            The central registry for high-quality, reusable code specifications and plugins.
           </p>
           <div className="max-w-2xl mx-auto">
             <div className="relative">
