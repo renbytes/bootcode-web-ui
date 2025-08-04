@@ -417,13 +417,13 @@ run: poetry run bandit -r spex/
         document.addEventListener('DOMContentLoaded', () => {
             const canvas = document.getElementById('matrix-canvas');
             
-            if (canvas instanceof HTMLCanvasElement) {
-                const matrixEffect = new MatrixRain(canvas);
-                matrixEffect.start();
-                window.addEventListener('resize', () => matrixEffect.start());
-            } else {
-                console.error('Canvas element with id "matrix-canvas" not found.');
-            }
+            // if (canvas instanceof HTMLCanvasElement) {
+            //     const matrixEffect = new MatrixRain(canvas);
+            //     matrixEffect.start();
+            //     window.addEventListener('resize', () => matrixEffect.start());
+            // } else {
+            //     console.error('Canvas element with id "matrix-canvas" not found.');
+            // }
         });
     </script>
 </body>
