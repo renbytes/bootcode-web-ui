@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bootcode.ai | From Spec to Production Code</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Reset and Base Styles */
+        :root {
+            --matrix-green: #39FF14;
+            --dark-green: #008F11;
+            --background-black: #000000;
+            --font-family-mono: 'Roboto Mono', 'Courier New', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--background-black);
+            color: var(--matrix-green);
+            font-family: var(--font-family-mono);
+            overflow-x: hidden;
+        }
+
+        /* Matrix Background Canvas */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        /* Main Content Wrapper */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--dark-green);
+            margin-bottom: 4rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-decoration: none;
+            color: var(--matrix-green);
+        }
+
+        .logo::after {
+            content: '_';
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            from, to { color: transparent; }
+            50% { color: var(--matrix-green); }
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            margin: 4rem 0 6rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            margin-bottom: 1rem;
+            text-shadow: 0 0 10px var(--matrix-green);
+        }
+
+        .hero p {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+            color: #ccc;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 12px 24px;
+            border: 2px solid var(--matrix-green);
+            background-color: transparent;
+            color: var(--matrix-green);
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: 700;
+            transition: background-color 0.3s, color 0.3s;
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.2);
+        }
+
+        .cta-button:hover {
+            background-color: var(--matrix-green);
+            color: var(--background-black);
+        }
+
+        /* Product Showcase Section */
+        .showcase {
+            margin-top: 5rem;
+        }
+        
+        .showcase h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .showcase-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .showcase-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .code-block {
+            background-color: rgba(10, 25, 10, 0.5);
+            border: 1px solid var(--dark-green);
+            padding: 1.5rem;
+            overflow-x: auto;
+            backdrop-filter: blur(2px);
+        }
+
+        .code-block h3 {
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--dark-green);
+            padding-bottom: 0.5rem;
+        }
+
+        .code-block pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 0.9rem;
+        }
+        
+        .code-block .comment {
+            color: #888;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 6rem;
+            padding: 2rem 0;
+            border-top: 1px solid var(--dark-green);
+        }
+
+        .social-links {
+            list-style-type: none;
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+
+        .social-links a {
+            color: var(--matrix-green);
+            text-decoration: none;
+            font-size: 1.1rem;
+            transition: color 0.3s;
+        }
+
+        .social-links a:hover {
+            color: #fff;
+            text-shadow: 0 0 5px var(--matrix-green);
+        }
+
+    </style>
+</head>
+<body>
+    <canvas id="matrix-canvas"></canvas>
+    <div class="container">
+        <header>
+            <a href="#" class="logo">bootcode.ai</a>
+        </header>
+
+        <main>
+            <section class="hero">
+                <h1>From Simple Spec to Production Code. Instantly.</h1>
+                <p>bootcode.ai uses AI to generate complete, production-ready data pipelines from a simple TOML specification. Stop writing boilerplate, start building.</p>
+                <a href="#showcase" class="cta-button">See How It Works</a>
+            </section>
+
+            <section class="showcase" id="showcase">
+                <h2>The "bootcode" Process</h2>
+                <div class="showcase-grid">
+                    <div class="code-block">
+                        <h3>1. You Write a Simple Spec...</h3>
+                        <pre><code><span class="comment"># spec.toml</span>
+language = "pyspark"
+project_type = "ecommerce_attribution"
+
+[project]
+name = "pyspark-attribution-project"
+version = "0.1.0"
+
+[[datasets]]
+name = "clicks"
+schema_or_sample = "user_id STRING, ad_id STRING"
+
+[[metrics]]
+name = "attributed_revenue"
+logic = "Calculate revenue from conversions within 24 hours of a click."
+aggregation = "sum"
+aggregationField = "sale_amount"</code></pre>
+                    </div>
+                    <div class="code-block">
+                        <h3>2. We Generate the Full Pipeline...</h3>
+                        <pre><code><span class="comment"># generated_pipeline/main.py</span>
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, when
+
+def setup_spark_session():
+    """Initializes and returns a SparkSession."""
+    return (SparkSession.builder
+        .appName("AttributionPipeline")
+        .getOrCreate())
+
+def run_attribution_logic(spark, clicks_df, conversions_df):
+    """Runs the core attribution logic."""
+    # ... (complex join and window function logic)
+    return attributed_df
+
+if __name__ == "__main__":
+    spark = setup_spark_session()
+    # ... (code to load data, run logic, and save output)
+    print("Pipeline finished successfully.")</code></pre>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <ul class="social-links">
+                <li><a href="https://github.com/bootcodeai" target="_blank">GitHub</a></li>
+                <li><a href="https://twitter.com/bootcodeai" target="_blank">Twitter</a></li>
+                <li><a href="mailto:contact@bootcode.ai">Email</a></li>
+            </ul>
+        </footer>
+    </div>
+
+    <!-- 
+      This is the compiled JavaScript from the TypeScript source.
+      The original TypeScript source is provided in the next tab.
+    -->
+    <script type="module">
+        /**
+         * @class MatrixRain
+         * @description Manages the creation and animation of a "Matrix"-style digital rain effect on an HTML canvas.
+         */
+        class MatrixRain {
+            /**
+             * @param {HTMLCanvasElement} canvas - The canvas element to draw on.
+             */
+            constructor(canvas) {
+                this.canvas = canvas;
+                // Fallback for environments where getContext might not exist
+                this.ctx = this.canvas.getContext('2d');
+                this.characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                this.fontSize = 16;
+                this.drops = [];
+                this.animationFrameId = 0;
+
+                // Bind the draw method to this instance
+                this.draw = this.draw.bind(this);
+            }
+
+            /**
+             * @description Sets up the canvas dimensions and initializes the drops array.
+             */
+            setup() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                
+                // Calculate the number of columns based on canvas width and font size
+                const columns = Math.floor(this.canvas.width / this.fontSize);
+                this.drops = [];
+                for (let i = 0; i < columns; i++) {
+                    this.drops[i] = 1;
+                }
+            }
+
+            /**
+             * @description The main animation loop. Draws each frame of the digital rain.
+             */
+            draw() {
+                if (!this.ctx) return;
+
+                // Draw a semi-transparent black rectangle to create the fading trail effect
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Set the color and font for the falling characters
+                this.ctx.fillStyle = '#39FF14'; // Matrix green
+                this.ctx.font = this.fontSize + 'px ' + getComputedStyle(document.body).fontFamily;
+
+                // Loop through each column (drops)
+                for (let i = 0; i < this.drops.length; i++) {
+                    // Pick a random character
+                    const text = this.characters.charAt(Math.floor(Math.random() * this.characters.length));
+                    
+                    // Draw the character at the current drop position
+                    this.ctx.fillText(text, i * this.fontSize, this.drops[i] * this.fontSize);
+
+                    // Reset the drop to the top if it goes off-screen, with a random chance
+                    if (this.drops[i] * this.fontSize > this.canvas.height && Math.random() > 0.975) {
+                        this.drops[i] = 0;
+                    }
+
+                    // Move the drop down
+                    this.drops[i]++;
+                }
+                
+                // Request the next frame
+                this.animationFrameId = window.requestAnimationFrame(this.draw);
+            }
+
+            /**
+             * @description Initializes the effect and starts the animation.
+             */
+            start() {
+                this.stop(); // Ensure any previous animation is stopped
+                this.setup();
+                this.draw();
+            }
+
+            /**
+             * @description Stops the animation loop.
+             */
+            stop() {
+                if (this.animationFrameId) {
+                    window.cancelAnimationFrame(this.animationFrameId);
+                }
+            }
+        }
+
+        // --- Main Execution ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('matrix-canvas');
+            
+            // Type guard to ensure canvas is an HTMLCanvasElement
+            if (canvas instanceof HTMLCanvasElement) {
+                const matrixEffect = new MatrixRain(canvas);
+                
+                // Start the effect
+                matrixEffect.start();
+
+                // Re-initialize on window resize to make it responsive
+                window.addEventListener('resize', () => matrixEffect.start());
+            } else {
+                console.error('Canvas element with id "matrix-canvas" not found.');
+            }
+        });
+    </script>
+</body>
+</html>
