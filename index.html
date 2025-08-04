@@ -201,78 +201,95 @@
         </header>
 
         <main>
-            <section class="hero">
-                <h1>From Simple Spec to Production Code. Instantly.</h1>
-                <p>bootcode.ai uses AI to generate complete, production-ready data pipelines from a simple specification. Stop writing boilerplate, start building.</p>
-                <!-- <a href="#showcase" class="cta-button">See How It Works</a> -->
-            </section>
-
             <section class="showcase" id="showcase">
                 <h2>The "bootcode" Process</h2>
                 <div class="showcase-grid">
                     <div class="code-block full-width">
                         <h3>1. You Write a Simple Spec...</h3>
                         <pre><code><span class="comment"># spec.toml</span>
-language = "python"
-project_type = "fastapi_microservice"
-description = "A simple user management API with CRUD operations."
+language = "pyspark"
+project_type = "ecommerce_attribution"
+description = "A PySpark pipeline for marketing attribution analysis."
 
 [project]
-name = "user-api-service"
+name = "pyspark-attribution-project"
 version = "0.1.0"
 
-<span class="comment"># Define the core data models (entities) for the service</span>
-[[entities]]
-name = "User"
-type = "pydantic_model"
-description = "A Pydantic model for a User with an ID, username, and email."
+<span class="comment"># Define input datasets</span>
+[[datasets]]
+name = "ad_impressions"
+[cite_start]description = "Records of which users saw which ads and when." [cite: 420]
+[cite_start]schema_or_sample = "impression_id STRING, user_id STRING" [cite: 421]
 
-<span class="comment"># Define the API routes and their behavior</span>
-[[api_routes]]
-path = "/users"
-type = "fastapi_crud_router"
-description = "Generate FastAPI endpoints for creating, reading, updating, and deleting users based on the 'User' entity."</code></pre>
+<span class="comment"># Define metrics to calculate</span>
+[[metrics]]
+name = "attributed_revenue"
+[cite_start]logic = "Calculate revenue from conversions within 24 hours of an ad click." [cite: 424]
+[cite_start]aggregation = "sum" [cite: 424]
+[cite_start]aggregationField = "sale_amount" [cite: 424]
+                        </code></pre>
                     </div>
                     <div class="code-block">
                         <h3>2. We Generate the Full Project...</h3>
                         <pre><code><span class="comment"># Project File System</span>
-user-api-service/
-├── app/
+pyspark-attribution-project/
+├── spex/
 │   ├── __init__.py
-│   ├── main.py
-│   ├── models.py
-│   └── router.py
+│   ├── cli.py
+│   ├── core/
+│   ├── llm/
+[cite_start]│   └── services.py [cite: 81]
 ├── tests/
-│   ├── __init__.py
-│   └── test_api.py
+[cite_start]│   ├── __init__.py [cite: 412]
+│   ├── integration/
+[cite_start]│   └── unit/ [cite: 83]
 ├── .gitignore
-├── Dockerfile
-├── pyproject.toml
-└── README.md
+[cite_start]├── pyproject.toml [cite: 136]
+[cite_start]└── README.md [cite: 103]
 </code></pre>
                     </div>
                     <div class="code-block">
                         <h3>3. ...And Production-Ready Code</h3>
-                        <pre><code><span class="comment"># app/main.py</span>
-from fastapi import FastAPI
-from .router import user_router
+                        <pre><code><span class="comment"># spex/cli.py</span>
+import asyncio
+from pathlib import Path
+import click
+[cite_start]from spex.services import GeneratorService [cite: 140]
 
-app = FastAPI(
-    title="User API Service",
-    description="A microservice for managing users.",
-    version="0.1.0",
-)
+@click.group()
+def cli(ctx: click.Context) -> None:
+    [cite_start]"""Spex uses AI to generate production-ready data pipelines.""" [cite: 141]
+    pass
 
-app.include_router(
-    user_router,
-    prefix="/api/v1",
-    tags=["users"],
-)
+@cli.command()
+@click.argument("spec_file", type=click.Path(exists=True))
+def generate(spec_file: Path) -> None:
+    [cite_start]"""Generate a new project from a spec file.""" [cite: 150]
+    service = GeneratorService(get_settings())
+    asyncio.run(service.generate_from_spec(spec_file))
 
-@app.get("/health")
-def health_check():
-    """Simple health check endpoint."""
-    return {"status": "ok"}
+</code></pre>
+                    </div>
+                    <div class="code-block full-width">
+                        <h3>4. Automated Code & Security Validation</h3>
+                        <pre><code><span class="comment"># .github/workflows/ci.yml</span>
+[cite_start]<span class="comment"># To guarantee code quality, a Continuous Integration pipeline automatically runs on every change. [cite: 2, 7]</span>
+
+- name: "Run Ruff Linter & Formatter"
+  [cite_start]run: poetry run ruff check . [cite: 2]
+<span class="comment"># Checks for style issues and automatically formats the code for consistency.</span>
+
+- name: "Run MyPy Type Checker"
+  [cite_start]run: poetry run mypy --strict spex/ [cite: 3, 16]
+<span class="comment"># Performs static analysis to find type-related errors, preventing bugs before runtime.</span>
+
+- name: "Run Pytest"
+  [cite_start]run: poetry run pytest tests/ [cite: 4]
+[cite_start]<span class="comment"># Executes the full suite of unit and integration tests to ensure code correctness. [cite: 99, 100, 101]</span>
+
+- name: "Run Bandit Security Scan"
+  [cite_start]run: poetry run bandit -r spex/ [cite: 5]
+<span class="comment"># Scans the codebase to find and report common security vulnerabilities.</span>
 </code></pre>
                     </div>
                 </div>
@@ -288,10 +305,6 @@ def health_check():
         </footer>
     </div>
 
-    <!-- 
-      This is the compiled JavaScript from the TypeScript source.
-      The original TypeScript source is provided in the next tab.
-    -->
     <script type="module">
         /**
          * @class MatrixRain
