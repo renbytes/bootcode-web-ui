@@ -22,7 +22,7 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
     <header className="bg-primary text-white">
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link to="/" className="text-xl font-bold">
-          Spex Hub
+          BootCode Hub
         </Link>
         <div className="flex items-center space-x-4">
           <Link to="/browse" className="hover:text-gray-300">Browse</Link>
