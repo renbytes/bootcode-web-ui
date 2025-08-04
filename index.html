@@ -254,9 +254,9 @@ if __name__ == "__main__":
 
         <footer>
             <ul class="social-links">
-                <li><a href="https://github.com/bootcodeai" target="_blank">GitHub</a></li>
-                <li><a href="https://twitter.com/bootcodeai" target="_blank">Twitter</a></li>
-                <li><a href="mailto:contact@bootcode.ai">Email</a></li>
+                <li><a href="https://github.com/renbytes/spex-core" target="_blank">GitHub</a></li>
+                <li><a href="https://x.com/bordumbb" target="_blank">Twitter</a></li>
+                <li><a href="mailto:bordumbb@gmail.com">Email</a></li>
             </ul>
         </footer>
     </div>
@@ -276,14 +276,18 @@ if __name__ == "__main__":
              */
             constructor(canvas) {
                 this.canvas = canvas;
-                // Fallback for environments where getContext might not exist
                 this.ctx = this.canvas.getContext('2d');
                 this.characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
                 this.fontSize = 16;
                 this.drops = [];
                 this.animationFrameId = 0;
+                
+                // --- Time-based animation control ---
+                this.lastTime = 0;
+                this.timer = 0;
+                // The interval in milliseconds. Higher value = slower animation.
+                this.interval = 50; 
 
-                // Bind the draw method to this instance
                 this.draw = this.draw.bind(this);
             }
 
@@ -294,7 +298,6 @@ if __name__ == "__main__":
                 this.canvas.width = window.innerWidth;
                 this.canvas.height = window.innerHeight;
                 
-                // Calculate the number of columns based on canvas width and font size
                 const columns = Math.floor(this.canvas.width / this.fontSize);
                 this.drops = [];
                 for (let i = 0; i < columns; i++) {
@@ -304,36 +307,40 @@ if __name__ == "__main__":
 
             /**
              * @description The main animation loop. Draws each frame of the digital rain.
+             * @param {number} timeStamp - The current time provided by requestAnimationFrame.
              */
-            draw() {
+            draw(timeStamp) {
                 if (!this.ctx) return;
+                
+                // Calculate time elapsed since the last frame
+                const deltaTime = timeStamp - this.lastTime;
+                this.lastTime = timeStamp;
 
-                // Draw a semi-transparent black rectangle to create the fading trail effect
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                // Only update the animation if enough time has passed
+                if (this.timer > this.interval) {
+                    // Draw a semi-transparent black rectangle to create the fading trail effect
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-                // Set the color and font for the falling characters
-                this.ctx.fillStyle = '#39FF14'; // Matrix green
-                this.ctx.font = this.fontSize + 'px ' + getComputedStyle(document.body).fontFamily;
+                    // Set the color and font for the falling characters
+                    this.ctx.fillStyle = '#39FF14';
+                    this.ctx.font = this.fontSize + 'px ' + getComputedStyle(document.body).fontFamily;
 
-                // Loop through each column (drops)
-                for (let i = 0; i < this.drops.length; i++) {
-                    // Pick a random character
-                    const text = this.characters.charAt(Math.floor(Math.random() * this.characters.length));
-                    
-                    // Draw the character at the current drop position
-                    this.ctx.fillText(text, i * this.fontSize, this.drops[i] * this.fontSize);
+                    for (let i = 0; i < this.drops.length; i++) {
+                        const text = this.characters.charAt(Math.floor(Math.random() * this.characters.length));
+                        this.ctx.fillText(text, i * this.fontSize, this.drops[i] * this.fontSize);
 
-                    // Reset the drop to the top if it goes off-screen, with a random chance
-                    if (this.drops[i] * this.fontSize > this.canvas.height && Math.random() > 0.975) {
-                        this.drops[i] = 0;
+                        if (this.drops[i] * this.fontSize > this.canvas.height && Math.random() > 0.975) {
+                            this.drops[i] = 0;
+                        }
+
+                        this.drops[i]++;
                     }
-
-                    // Move the drop down
-                    this.drops[i]++;
+                    this.timer = 0; // Reset the timer
+                } else {
+                    this.timer += deltaTime; // Accumulate time
                 }
                 
-                // Request the next frame
                 this.animationFrameId = window.requestAnimationFrame(this.draw);
             }
 
@@ -341,9 +348,10 @@ if __name__ == "__main__":
              * @description Initializes the effect and starts the animation.
              */
             start() {
-                this.stop(); // Ensure any previous animation is stopped
+                this.stop();
                 this.setup();
-                this.draw();
+                this.lastTime = 0; // Reset time for new start
+                this.animationFrameId = window.requestAnimationFrame(this.draw);
             }
 
             /**
@@ -360,14 +368,9 @@ if __name__ == "__main__":
         document.addEventListener('DOMContentLoaded', () => {
             const canvas = document.getElementById('matrix-canvas');
             
-            // Type guard to ensure canvas is an HTMLCanvasElement
             if (canvas instanceof HTMLCanvasElement) {
                 const matrixEffect = new MatrixRain(canvas);
-                
-                // Start the effect
                 matrixEffect.start();
-
-                // Re-initialize on window resize to make it responsive
                 window.addEventListener('resize', () => matrixEffect.start());
             } else {
                 console.error('Canvas element with id "matrix-canvas" not found.');
