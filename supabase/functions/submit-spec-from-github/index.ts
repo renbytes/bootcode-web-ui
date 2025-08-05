@@ -7,31 +7,36 @@ const GITHUB_URL_REGEX = /https:\/\/github\.com\/([^\/]+)\/([^\/]+)/;
 
 // Function to parse TOML content
 function parseToml(tomlContent: string): any {
-  // A simple, dependency-free TOML parser. For production, a more robust
-  // library would be better, but this handles the specific spec format.
+  // A simple, dependency-free TOML parser.
   const data: any = { project: {}, datasets: [], metrics: [], outputDatasets: [] };
   let currentSection: any[] | null = null;
+  let currentSectionName: string | null = null;
 
   tomlContent.split('\n').forEach(line => {
     const trimmed = line.trim();
     if (trimmed.startsWith('[[') && trimmed.endsWith(']]')) {
       const sectionName = trimmed.slice(2, -2);
-      currentSection = data[sectionName] || [];
-      data[sectionName] = currentSection;
+      currentSectionName = sectionName;
+      if (!data[sectionName]) {
+        data[sectionName] = [];
+      }
+      currentSection = data[sectionName];
       currentSection.push({});
     } else if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
         const sectionName = trimmed.slice(1, -1);
+        currentSectionName = sectionName;
         data[sectionName] = {};
         currentSection = null; // Reset section context
     } else if (trimmed.includes('=')) {
       const [key, value] = trimmed.split('=').map(s => s.trim());
       const parsedValue = value.replace(/"/g, '');
-      const target = currentSection ? currentSection[currentSection.length - 1] : data.project;
       
-      if(line.startsWith('language =') || line.startsWith('project_type =') || line.startsWith('description =')) {
-          data[key] = parsedValue;
+      if (currentSection) {
+        currentSection[currentSection.length - 1][key] = parsedValue;
+      } else if (currentSectionName) {
+        data[currentSectionName][key] = parsedValue;
       } else {
-          target[key] = parsedValue;
+        data[key] = parsedValue;
       }
     }
   });
@@ -53,6 +58,7 @@ Deno.serve(async (req) => {
     }
 
     const [, owner, repo] = match;
+    // Updated to look for spec.toml specifically
     const specUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/spec.toml`;
 
     // Fetch the spec.toml file from the repository
@@ -69,15 +75,39 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
     
-    // Get the authenticated user's ID
+    // Get the authenticated user's ID from the request's Authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+        throw new Error("Missing Authorization header.");
+    }
     const { data: { user } } = await createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-        { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+        { global: { headers: { Authorization: authHeader } } }
     ).auth.getUser();
 
     if (!user) {
         throw new Error("User not authenticated.");
+    }
+
+    // **FIX: Ensure a profile exists for the user before proceeding.**
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile) {
+        // Profile doesn't exist, so create it.
+        const { error: insertProfileError } = await supabaseAdmin.from('profiles').insert({
+            id: user.id,
+            username: user.user_metadata.user_name,
+            avatar_url: user.user_metadata.avatar_url,
+        });
+        if (insertProfileError) {
+            console.error('Error creating profile:', insertProfileError);
+            throw new Error(`Failed to create user profile: ${insertProfileError.message}`);
+        }
     }
 
     // Insert the parsed data into the 'specs' table
@@ -90,7 +120,6 @@ Deno.serve(async (req) => {
       version: specData.project.version,
       github_url: githubUrl,
       toml_content: tomlContent,
-      // You can add more fields like tags, long_description etc. here
     }).select().single();
 
     if (error) {
@@ -103,6 +132,7 @@ Deno.serve(async (req) => {
       status: 200,
     });
   } catch (error) {
+    console.error('Function error:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
