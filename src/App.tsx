@@ -9,7 +9,8 @@ import Home from 'pages/Home';
 import SpecPage from 'pages/SpecPage';
 import BrowsePage from 'pages/BrowsePage';
 import SubmitPage from 'pages/SubmitPage'; // Renamed
-// import PluginPage from 'pages/PluginPage'; // You would create this next
+import PluginPage from 'pages/PluginPage'; // You would create this next
+
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
@@ -63,7 +64,7 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/spec/:id" element={<SpecPage />} />
-            {/* <Route path="/plugin/:id" element={<PluginPage />} /> */}
+            <Route path="/plugin/:id" element={<PluginPage />} />
             <Route path="/browse" element={<BrowsePage />} />
             <Route path="/submit" element={<SubmitPage />} />
           </Routes>
