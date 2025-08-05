@@ -85,7 +85,7 @@ const Home: React.FC = () => {
           <Package size={64} className="mx-auto mb-4 text-accent" />
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Build-Passing Code, Instantly</h1>
           <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
-            Generate complete, production-ready data pipelines from simple specifications with the Boot AI engine.
+            Generate complete, production-ready code from simple specifications with the Boot AI engine.
           </p>
           
           {/* Installation Command Block */}
