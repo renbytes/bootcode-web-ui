@@ -57,7 +57,7 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
     <header className="bg-primary text-white shadow-md">
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link to="/" className="text-xl font-bold hover:text-gray-300 transition-colors">
-          Spex Hub
+          BootCode Hub
         </Link>
         <div className="flex items-center space-x-6">
           {/* The Dropdown component now encapsulates the browse link and its menu */}

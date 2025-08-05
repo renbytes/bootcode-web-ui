@@ -1,5 +1,5 @@
 -- SQL for 'plugins' Table
--- This table stores community-submitted plugins for the Spex ecosystem.
+-- This table stores community-submitted plugins for the bootcode ecosystem.
 
 CREATE TABLE public.plugins (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

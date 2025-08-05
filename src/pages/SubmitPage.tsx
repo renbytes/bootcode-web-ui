@@ -166,7 +166,7 @@ const SubmitPage: React.FC = () => {
             type="plugin"
             icon={<Plug size={32} />}
             title="Submit a Plugin"
-            description="Add a new language plugin (e.g., `spex-rust`) to the ecosystem."
+            description="Add a new language plugin (e.g., `boot-rust`) to the ecosystem."
             onSelect={() => handleSelect('plugin')}
             isSelected={selectedType === 'plugin'}
             isDisabled={selectedType !== null && selectedType !== 'plugin'}

@@ -70,7 +70,7 @@ const App: React.FC = () => {
           </Routes>
         </main>
         <footer className="bg-primary text-white text-center p-4 mt-auto">
-            Spex Community Hub © 2025
+            BootCode Community Hub © 2025
         </footer>
       </div>
     </Router>

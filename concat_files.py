@@ -29,7 +29,7 @@ DEFAULT_IGNORE_DIRS = [
     "configs",
     "scripts",
     "examples",
-    "_spex_logs",   
+    "_boot_logs",   
     "node_modules",
     "dist",
 ]

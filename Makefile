@@ -1,4 +1,4 @@
-# Makefile for the Spex Community Hub frontend application
+# Makefile for the BootCode Community Hub frontend application
 
 # Use .PHONY to declare targets that are not actual files.
 # This prevents conflicts if a file with the same name as a target exists.

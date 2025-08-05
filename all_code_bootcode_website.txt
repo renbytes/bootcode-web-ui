@@ -128,7 +128,7 @@ https://github.com/settings/applications/3112265
 
 --- START OF FILE: package.json ---
 {
-  "name": "spex-community-hub",
+  "name": "bootcode-community-hub",
   "version": "0.1.0",
   "private": true,
   "scripts": {
