@@ -42,6 +42,7 @@ DEFAULT_IGNORE_FILES = [
     ".DS_Store",
     ".env",
     "poetry.lock",
+    "package-lock.json"
 ]
 
 
@@ -122,7 +123,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--output",
-        default="all_code_spex_core.txt",
+        default="all_code_bootcode_website.txt",
         help="The name of the output file.",
     )
 

@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { User as AppUser } from './types';
-import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 import Navbar from 'components/Navbar';
 import Home from 'pages/Home';
 import SpecPage from 'pages/SpecPage';
+import BrowsePage from 'pages/BrowsePage'; // New
+import SubmitSpecPage from 'pages/SubmitSpecPage'; // New
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
@@ -31,12 +33,23 @@ const App: React.FC = () => {
     };
   }, []);
 
-  const mapSupabaseUserToAppUser = (supabaseUser: SupabaseUser | null) => {
+  const mapSupabaseUserToAppUser = async (supabaseUser: SupabaseUser | null) => {
     if (supabaseUser) {
+        // Fetch the username from the public.profiles table
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .eq('id', supabaseUser.id)
+            .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+            console.error('Error fetching profile:', error);
+        }
+
       const appUser: AppUser = {
         id: supabaseUser.id,
-        username: supabaseUser.user_metadata.user_name || 'N/A',
-        avatarUrl: supabaseUser.user_metadata.avatar_url || '',
+        username: profile?.username || supabaseUser.user_metadata.user_name || 'N/A',
+        avatarUrl: profile?.avatar_url || supabaseUser.user_metadata.avatar_url || '',
       };
       setCurrentUser(appUser);
     } else {
@@ -46,12 +59,14 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen bg-light-gray font-sans">
         <Navbar user={currentUser} />
         <main className="flex-grow">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/spec/:id" element={<SpecPage />} />
+            <Route path="/browse" element={<BrowsePage />} />
+            <Route path="/submit" element={<SubmitSpecPage />} />
           </Routes>
         </main>
         <footer className="bg-primary text-white text-center p-4 mt-auto">
