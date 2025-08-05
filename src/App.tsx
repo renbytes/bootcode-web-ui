@@ -7,21 +7,20 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 import Navbar from 'components/Navbar';
 import Home from 'pages/Home';
 import SpecPage from 'pages/SpecPage';
-import BrowsePage from 'pages/BrowsePage'; // New
-import SubmitSpecPage from 'pages/SubmitSpecPage'; // New
+import BrowsePage from 'pages/BrowsePage';
+import SubmitPage from 'pages/SubmitPage'; // Renamed
+// import PluginPage from 'pages/PluginPage'; // You would create this next
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
 
   useEffect(() => {
-    // Check for an initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         mapSupabaseUserToAppUser(session.user);
       }
     });
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         mapSupabaseUserToAppUser(session?.user ?? null);
@@ -35,14 +34,13 @@ const App: React.FC = () => {
 
   const mapSupabaseUserToAppUser = async (supabaseUser: SupabaseUser | null) => {
     if (supabaseUser) {
-        // Fetch the username from the public.profiles table
         const { data: profile, error } = await supabase
             .from('profiles')
             .select('username, avatar_url')
             .eq('id', supabaseUser.id)
             .single();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        if (error && error.code !== 'PGRST116') {
             console.error('Error fetching profile:', error);
         }
 
@@ -65,8 +63,9 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/spec/:id" element={<SpecPage />} />
+            {/* <Route path="/plugin/:id" element={<PluginPage />} /> */}
             <Route path="/browse" element={<BrowsePage />} />
-            <Route path="/submit" element={<SubmitSpecPage />} />
+            <Route path="/submit" element={<SubmitPage />} />
           </Routes>
         </main>
         <footer className="bg-primary text-white text-center p-4 mt-auto">
