@@ -22,20 +22,19 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const pluginName = url.searchParams.get('name');
-    const userOS = url.searchParams.get('os'); // e.g., 'apple-darwin'
-    const userArch = url.searchParams.get('arch'); // e.g., 'arm64'
+    const userOS = url.searchParams.get('os');
+    const userArch = url.searchParams.get('arch');
 
     if (!pluginName || !userOS || !userArch) {
       throw new Error('Plugin name, os, and arch are required query parameters.');
     }
 
-    // Create a Supabase client with the service role key to read plugin data
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 1. Get the plugin's GitHub URL from our database
+    // 1. Get all necessary plugin data from our database in one call
     const { data: plugin, error: dbError } = await supabaseAdmin
       .from('plugins')
       .select('github_url, language')
@@ -45,11 +44,22 @@ Deno.serve(async (req) => {
     if (dbError) throw dbError;
     if (!plugin) throw new Error(`Plugin '${pluginName}' not found.`);
 
+    // For Python plugins, the installation is direct from Git, so we don't need the GitHub API.
+    if (plugin.language === 'python') {
+        return new Response(JSON.stringify({
+            name: pluginName,
+            language: plugin.language,
+            github_url: plugin.github_url,
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+    }
+
+    // For binary plugins (like Rust), proceed to find the download URL.
     const match = plugin.github_url.match(/github\.com\/([^\/]+)\/([^\/]+)/);
     if (!match) throw new Error('Invalid GitHub URL in database.');
     const [, owner, repo] = match;
 
-    // 2. Use the GitHub API to get the latest release information
     const githubUrl = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
     const ghResponse = await fetch(githubUrl);
     if (!ghResponse.ok) {
@@ -57,18 +67,16 @@ Deno.serve(async (req) => {
     }
     const release = await ghResponse.json();
 
-    // 3. Find the correct download asset for the user's platform
     const asset = findMatchingAsset(release.assets, userOS, userArch);
     if (!asset) {
       throw new Error(`No compatible release asset found for ${userOS}/${userArch}.`);
     }
 
-    // 4. Return the direct download URL and other metadata
     const responsePayload = {
       name: pluginName,
       language: plugin.language,
       version: release.tag_name,
-      download_url: asset.browser_download_url, // The direct URL to the asset
+      download_url: asset.browser_download_url,
     };
 
     return new Response(JSON.stringify(responsePayload), {
