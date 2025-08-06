@@ -1,118 +1,109 @@
-// src/pages/SubmitPage.tsx
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
-import { Github, FileText, Plug } from 'lucide-react';
+// supabase/functions/submit-plugin-from-github/index.ts
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts';
 
-type SubmissionType = 'spec' | 'plugin';
+// Regular expression to parse GitHub URLs
+const GITHUB_URL_REGEX = /https:\/\/github\.com\/([^\/]+)\/([^\/]+)/;
 
-const SubmitPage: React.FC = () => {
-  const [submissionType, setSubmissionType] = useState<SubmissionType>('spec');
-  const [githubUrl, setGithubUrl] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const navigate = useNavigate();
+// Simple TOML parser to find specific keys
+function parseTomlValue(content: string, key: string): string | null {
+  const match = content.match(new RegExp(`^\\s*${key}\\s*=\\s*"(.*?)"`, "m"));
+  return match ? match[1] : null;
+}
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      setError("You must be logged in to submit.");
-      setLoading(false);
-      return;
+  try {
+    const { githubUrl } = await req.json();
+    const match = githubUrl.match(GITHUB_URL_REGEX);
+
+    if (!match) {
+      throw new Error('Invalid GitHub URL format.');
     }
 
-    const functionName = submissionType === 'spec' 
-      ? 'submit-spec-from-github' 
-      : 'submit-plugin-from-github';
+    const [, owner, repo] = match;
+    let language = '';
+    let manifestContent = '';
+    let manifestUrl = '';
 
-    try {
-      const { data, error: invokeError } = await supabase.functions.invoke(functionName, {
-        body: { githubUrl },
-      });
+    // --- Intelligent Manifest Detection ---
+    // 1. Try to fetch pyproject.toml for Python projects
+    manifestUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/pyproject.toml`;
+    let manifestResponse = await fetch(manifestUrl);
 
-      if (invokeError) throw invokeError;
-      
-      const newId = data.data.id;
-      setSuccess('Submission successful! Redirecting...');
-      // Navigate to the correct page based on type
-      setTimeout(() => navigate(submissionType === 'spec' ? `/spec/${newId}` : `/plugin/${newId}`), 2000);
-
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'An unexpected error occurred.');
-    } finally {
-      setLoading(false);
+    if (manifestResponse.ok) {
+        language = 'python';
+        manifestContent = await manifestResponse.text();
+    } else {
+        // 2. If that fails, try Cargo.toml for Rust projects
+        manifestUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/Cargo.toml`;
+        manifestResponse = await fetch(manifestUrl);
+        if (manifestResponse.ok) {
+            language = 'rust';
+            manifestContent = await manifestResponse.text();
+        } else {
+            // 3. If neither is found, throw an error
+            throw new Error(`Could not find 'pyproject.toml' or 'Cargo.toml' in ${githubUrl}.`);
+        }
     }
-  };
 
-  return (
-    <div className="container mx-auto max-w-2xl px-4 py-16">
-      <div className="bg-white p-8 rounded-lg shadow-md border border-medium-gray">
-        <div className="text-center mb-8">
-          <Github size={48} className="mx-auto text-primary mb-4" />
-          <h1 className="text-3xl font-bold text-primary">Submit to the Hub</h1>
-          <p className="text-dark-gray mt-2">Share your spec or plugin with the community.</p>
-        </div>
+    // Parse the manifest file for plugin metadata
+    const name = parseTomlValue(manifestContent, 'name');
+    const version = parseTomlValue(manifestContent, 'version');
+    const description = parseTomlValue(manifestContent, 'description');
 
-        {/* Submission Type Toggle */}
-        <div className="flex justify-center mb-8">
-          <div className="flex border-2 border-accent rounded-lg p-1">
-            <button
-              onClick={() => setSubmissionType('spec')}
-              className={`flex items-center px-4 py-2 rounded-md transition-colors ${submissionType === 'spec' ? 'bg-accent text-white' : 'text-accent'}`}
-            >
-              <FileText size={16} className="mr-2"/> Spec
-            </button>
-            <button
-              onClick={() => setSubmissionType('plugin')}
-              className={`flex items-center px-4 py-2 rounded-md transition-colors ${submissionType === 'plugin' ? 'bg-accent text-white' : 'text-accent'}`}
-            >
-              <Plug size={16} className="mr-2"/> Plugin
-            </button>
-          </div>
-        </div>
+    if (!name || !version) {
+        throw new Error(`Could not parse 'name' and 'version' from the project's manifest file.`);
+    }
 
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="githubUrl" className="block text-primary font-bold mb-2">
-              GitHub Repository URL
-            </label>
-            <input
-              type="url"
-              id="githubUrl"
-              value={githubUrl}
-              onChange={(e) => setGithubUrl(e.target.value)}
-              className="w-full p-3 text-lg text-primary rounded-md border-2 border-medium-gray focus:outline-none focus:border-accent"
-              placeholder="https://github.com/user/repo-name"
-              required
-            />
-             <p className="text-sm text-dark-gray mt-2">
-              {submissionType === 'spec'
-                ? "Repository must contain a `spec.toml` file in the root."
-                : "Repository must contain a `Cargo.toml` file in the root."}
-            </p>
-          </div>
+    // Create a Supabase client with the service role key to bypass RLS
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    
+    // Get the authenticated user's ID
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+        throw new Error("Missing Authorization header.");
+    }
+    const { data: { user } } = await createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: authHeader } } }
+    ).auth.getUser();
 
-          {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">{error}</div>}
-          {success && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">{success}</div>}
+    if (!user) {
+        throw new Error("User not authenticated.");
+    }
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-accent hover:bg-red-700 text-white font-bold py-3 px-4 rounded-md transition-colors disabled:bg-gray-400"
-          >
-            {loading ? 'Submitting...' : `Submit ${submissionType === 'spec' ? 'Spec' : 'Plugin'}`}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-};
+    // Insert the parsed data into the 'plugins' table
+    const { data, error } = await supabaseAdmin.from('plugins').insert({
+      user_id: user.id,
+      name: name,
+      description: description || 'No description provided.',
+      language: language,
+      version: version,
+      github_url: githubUrl,
+    }).select().single();
 
-export default SubmitPage;
+    if (error) {
+      console.error('Supabase insert error:', error);
+      throw error;
+    }
+
+    return new Response(JSON.stringify({ data }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    });
+  } catch (error) {
+    console.error('Function error:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    });
+  }
+});
