@@ -8,15 +8,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    // The plugin name will be like 'boot-rust'
-    const pluginName = url.searchParams.get('name');
-    if (!pluginName) throw new Error('Plugin name is required.');
-
+    // This now creates a client with the user's authentication context
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
+
+    const url = new URL(req.url);
+    const pluginName = url.searchParams.get('name');
+    if (!pluginName) throw new Error('Plugin name is required.');
 
     const { data, error } = await supabase
       .from('plugins')
