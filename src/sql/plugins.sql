@@ -6,9 +6,10 @@ CREATE TABLE public.plugins (
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
-  language TEXT, -- e.g., 'rust', 'python'
-  version TEXT,
+  language TEXT,
+  version TEXT, -- Version is now optional and will be populated dynamically
   github_url TEXT UNIQUE NOT NULL,
+  install_strategy TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

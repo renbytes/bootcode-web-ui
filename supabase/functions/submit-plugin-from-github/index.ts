@@ -1,106 +1,72 @@
 // supabase/functions/submit-plugin-from-github/index.ts
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { parse } from 'https://deno.land/std@0.208.0/toml/mod.ts';
 
-// Regular expression to parse GitHub URLs
 const GITHUB_URL_REGEX = /https:\/\/github\.com\/([^\/]+)\/([^\/]+)/;
 
-// Simple TOML parser to find specific keys
-function parseTomlValue(content: string, key: string): string | null {
-  const match = content.match(new RegExp(`^\\s*${key}\\s*=\\s*"(.*?)"`, "m"));
-  return match ? match[1] : null;
-}
-
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
     const { githubUrl } = await req.json();
     const match = githubUrl.match(GITHUB_URL_REGEX);
-
-    if (!match) {
-      throw new Error('Invalid GitHub URL format.');
-    }
+    if (!match) throw new Error('Invalid GitHub URL format.');
 
     const [, owner, repo] = match;
-    let language = '';
-    let manifestContent = '';
-    let manifestUrl = '';
+    const manifestUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/plugin.toml`;
 
-    // --- Intelligent Manifest Detection ---
-    // 1. Try to fetch pyproject.toml for Python projects
-    manifestUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/pyproject.toml`;
-    let manifestResponse = await fetch(manifestUrl);
+    // 1. Fetch and parse the manifest.
+    const manifestResponse = await fetch(manifestUrl);
+    if (!manifestResponse.ok) throw new Error(`Could not find 'plugin.toml' in ${githubUrl}.`);
+    const manifestData = parse(await manifestResponse.text());
+    const pluginMeta = manifestData.plugin;
 
-    if (manifestResponse.ok) {
-        language = 'python';
-        manifestContent = await manifestResponse.text();
-    } else {
-        // 2. If that fails, try Cargo.toml for Rust projects
-        manifestUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/Cargo.toml`;
-        manifestResponse = await fetch(manifestUrl);
-        if (manifestResponse.ok) {
-            language = 'rust';
-            manifestContent = await manifestResponse.text();
-        } else {
-            // 3. If neither is found, throw an error
-            throw new Error(`Could not find 'pyproject.toml' or 'Cargo.toml' in ${githubUrl}.`);
-        }
+    if (!pluginMeta || !pluginMeta.name || !pluginMeta.language || !pluginMeta.install_strategy) {
+      throw new Error("'plugin.toml' is missing required fields: name, language, install_strategy.");
     }
 
-    // Parse the manifest file for plugin metadata
-    const name = parseTomlValue(manifestContent, 'name');
-    const version = parseTomlValue(manifestContent, 'version');
-    const description = parseTomlValue(manifestContent, 'description');
+    // 2. Dynamically determine the version.
+    let version = 'latest'; // Default for non-binary or unreleased projects
+    if (pluginMeta.install_strategy === 'binary') {
+      const releaseUrl = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
+      const ghResponse = await fetch(releaseUrl);
 
-    if (!name || !version) {
-        throw new Error(`Could not parse 'name' and 'version' from the project's manifest file.`);
+      if (ghResponse.ok) {
+        const release = await ghResponse.json();
+        version = release.tag_name || 'latest'; // Use tag_name as the version
+      } else {
+        console.warn(`Could not fetch latest release for ${owner}/${repo}. Defaulting version to 'latest'.`);
+      }
     }
 
-    // Create a Supabase client with the service role key to bypass RLS
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-    
-    // Get the authenticated user's ID
+    // 3. Get user and insert into the database.
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-        throw new Error("Missing Authorization header.");
-    }
-    const { data: { user } } = await createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-        { global: { headers: { Authorization: authHeader } } }
-    ).auth.getUser();
+    if (!authHeader) throw new Error("Missing Authorization header.");
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error("User not authenticated.");
 
-    if (!user) {
-        throw new Error("User not authenticated.");
-    }
-
-    // Insert the parsed data into the 'plugins' table
+    const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     const { data, error } = await supabaseAdmin.from('plugins').insert({
       user_id: user.id,
-      name: name,
-      description: description || 'No description provided.',
-      language: language,
-      version: version,
+      name: pluginMeta.name,
+      description: pluginMeta.description || 'No description provided.',
+      language: pluginMeta.language,
       github_url: githubUrl,
+      install_strategy: pluginMeta.install_strategy,
+      version: version, // Store the dynamically fetched version
     }).select().single();
 
-    if (error) {
-      console.error('Supabase insert error:', error);
-      throw error;
-    }
+    if (error) throw error;
 
-    return new Response(JSON.stringify({ data }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    });
+    return new Response(JSON.stringify({ data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
   } catch (error) {
-    console.error('Function error:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
