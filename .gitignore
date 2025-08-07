@@ -3,4 +3,4 @@ dist
 .vscode
 .DS_Store
 .env
-all_code_boot_core.txt
+all_code_bootcode_website.txt

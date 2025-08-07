@@ -107,7 +107,7 @@ const SubmissionForm: React.FC<{ type: SubmissionType }> = ({ type }) => {
         <p className="text-sm text-dark-gray mt-2 text-left">
           {type === 'spec'
             ? <>Repository must contain a <code className="font-mono bg-gray-200 p-1 rounded-md">spec.toml</code> file in the root.</>
-            : <>Repository must contain a plugin manifest (e.g., <code className="font-mono bg-gray-200 p-1 rounded-md">Cargo.toml</code>, <code className="font-mono bg-gray-200 p-1 rounded-md">pyproject.toml</code>) in the root.</>}
+            : <>Repository must contain a plugin manifest (e.g., <code className="font-mono bg-gray-200 p-1 rounded-md">plugin.toml</code>) in the root.</>}
         </p>
       </div>
 
